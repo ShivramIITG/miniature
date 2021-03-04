@@ -43,7 +43,7 @@
 
    - name: find pip executable
      shell: "which pip3"
-     register: pip_path     
+     register: pip_path
 
    - name: install python-backports.ssl-match-hostname
      pip: name=backports.ssl-match-hostname executable={{pip_path.stdout}}
@@ -61,9 +61,9 @@
      pip: name=pexpect executable={{pip_path.stdout}}
 
    - name: build and install Containernet (using Mininet installer)
-     shell: PYTHON=python3 containernet/util/install.sh -fnv
+     shell: PYTHON=python3 util/install.sh -fnv
      args:
-       chdir: ../../
+       chdir: ../
 
    - name: install Containernet Python egg etc.
      shell: make -f Makefile develop

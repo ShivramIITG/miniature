@@ -1,6 +1,6 @@
-# Containernet
+# Miniature
 
-<img align="left" width="200" height="200" style="margin: 30px 30px 0 0;" src="/assets/logo.png" />
+Miniature is a fork of Containernet to support Kubernetes.
 
 Containernet is a fork of the famous [Mininet](http://mininet.org) network emulator and allows to use [Docker](https://www.docker.com) containers as hosts in emulated network topologies. This enables interesting functionalities to build networking/cloud emulators and testbeds. Containernet is actively used by the research community, focussing on experiments in the field of cloud computing, fog computing, network function virtualization (NFV) and multi-access edge computing (MEC). One example for this is the [NFV multi-PoP infrastructure emulator](https://github.com/sonata-nfv/son-emu) which was created by the SONATA-NFV project and is now part of the [OpenSource MANO (OSM)](https://osm.etsi.org) project.
 
@@ -110,7 +110,7 @@ Containernet already provides a simple Python server for testing purposes. To bu
 docker build -f Dockerfile.server -t test_server:latest .
 ```
 
-If you have not added your user to the `docker` group as described [here](https://docs.docker.com/engine/install/linux-postinstall/), you will need to prepend `sudo`. 
+If you have not added your user to the `docker` group as described [here](https://docs.docker.com/engine/install/linux-postinstall/), you will need to prepend `sudo`.
 
 We further need a basic client to make a CURL request. Containernet provides that as well. Please run
 

@@ -974,6 +974,8 @@ class Docker ( Host ):
         self.dc = None  # pointer to the dict containing 'Id' and 'Warnings' keys of the container
         self.dcinfo = None
         self.did = None # Id of running container
+        self.cgroup_version = None
+        self.cgroup_parent = None
         #  let's store our resource limits to have them available through the
         #  Mininet API later on
         defaults = { 'cpu_quota': -1,
@@ -1052,6 +1054,19 @@ class Docker ( Host ):
         debug("dcmd: %s\n" % str(self.dcmd))
         info("%s: kwargs %s\n" % (name, str(kwargs)))
 
+        # get cgroup_version and cgroup_parent
+        try:
+            self.cgroup_version = int(check_output('docker info | grep "Cgroup Version"', shell=True).decode('utf-8').split(':')[1])
+        except:
+            error("Problem getting cgroup_version")
+            return
+        if self.cgroup_version == 1:
+            self.cgroup_parent = '/docker'
+        elif self.cgroup_version == 2:
+            self.cgroup_parent = 'system-docker.slice'
+        else:
+            error("Invalid cgroup_version: %s" % str(self.cgroup_version))
+
         # creats host config for container
         # see: https://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_host_config
         hc = self.dcli.create_host_config(
@@ -1069,9 +1084,9 @@ class Docker ( Host ):
             cap_add=self.cap_add,  # see docker-py docu
             sysctls=self.sysctls,   # see docker-py docu
             storage_opt=self.storage_opt,
-            # Assuming Docker uses the cgroupfs driver, we set the parent to safely
-            # access cgroups when modifying resource limits.
-            cgroup_parent='/docker'
+            # We set the parent to safely access cgroups when modifying
+            # resource limits.
+            cgroup_parent=self.cgroup_parent
         )
 
         if kwargs.get("rm", False):
@@ -1440,6 +1455,18 @@ class Docker ( Host ):
         if memswap_limit >= 0:
             self.resources['memswap_limit'] = self.cgroupSet("memsw.limit_in_bytes", memswap_limit, resource="memory")
 
+    def _cgroupPath(self, resource=None):
+        with open('/proc/' + str(self.pid) + '/cgroup', 'r') as file:
+            if self.cgroup_version == 1:
+                regex = re.compile(r'\b' + resource + r'\b')
+                for line in file:
+                    if regex.search(line):
+                        return line.split(':')[2].strip()
+            else:   # cgroup_version == 2
+                for line in file:
+                    if line.startswith('0::'):
+                        return line.split(':')[2].strip()
+
 
     def cgroupSet(self, param, value, resource='cpu'):
         """
@@ -1452,8 +1479,7 @@ class Docker ( Host ):
         Returns: value that was set
 
         """
-        cmd = 'cgset -r %s.%s=%s docker/%s' % (
-            resource, param, value, self.did)
+        cmd = 'cgset -r %s.%s=%s %s' % (resource, param, value, self._cgroupPath(resource))
         debug(cmd + "\n")
         try:
             check_output(cmd, shell=True)
@@ -1476,8 +1502,7 @@ class Docker ( Host ):
         Returns: value
 
         """
-        cmd = 'cgget -r %s.%s docker/%s' % (
-            resource, param, self.did)
+        cmd = 'cgget -r %s.%s %s' % (resource, param, self._cgroupPath(resource))
         try:
             return int(check_output(cmd, shell=True).split()[-1])
         except:
